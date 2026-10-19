@@ -1,0 +1,18 @@
+name: p6_probe
+description: P6 spike probe — email-code login through the system browser on iOS and Android.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_auth_2: ^4.1.0      # ASWebAuthenticationSession (iOS/macOS), Custom Tabs (Android)
+  http: ^1.2.2
+  crypto: ^3.0.5
+  shared_preferences: ^2.3.2
+
+flutter:
+  uses-material-design: true

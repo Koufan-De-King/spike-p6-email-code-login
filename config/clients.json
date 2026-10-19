@@ -1,0 +1,14 @@
+{
+  "clients": [
+    {
+      "client_id": "another-app",
+      "public": true,
+      "redirect_uris": [
+        "http://127.0.0.1/callback",
+        "digital.camer.another:/oauth2redirect",
+        "https://auth.another.camer.digital/app/callback"
+      ],
+      "scopes": ["openid", "email", "offline_access"]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "applinks": {
+    "details": [
+      { "appIDs": ["TEAMID1234.digital.camer.another"], "components": [{ "/": "/app/callback" }] }
+    ]
+  },
+  "webcredentials": { "apps": ["TEAMID1234.digital.camer.another"] }
+}

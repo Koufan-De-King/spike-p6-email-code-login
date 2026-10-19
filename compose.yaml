@@ -1,0 +1,63 @@
+# P6 spike: email one-time-code login through the system browser.
+#
+#   docker compose up -d --build            # idp :8080, Mailpit :8025, Redis
+#   docker compose run --rm e2e             # headless end-to-end check through the real loopback hop
+#   cargo run -p another-login              # the same flow with your real browser
+#
+# Phones on the same Wi-Fi: ISSUER=http://<your-LAN-IP>:8080 docker compose up -d
+# (the issuer must be the exact URL the phone's browser uses). For the per-OS videos use the
+# deployed https://auth.another.camer.digital instead, so cookies get __Host- and Secure.
+
+name: spike-p6
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 15
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "8025:8025"   # inbox UI + API: read the codes here
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+
+  idp:
+    build: .
+    image: spike-p6/idp:dev
+    depends_on:
+      redis: { condition: service_healthy }
+      mailpit: { condition: service_started }
+    ports:
+      - "8080:8080"
+    environment:
+      ISSUER: ${ISSUER:-http://127.0.0.1:8080}
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      # Fixed only so codes survive an idp restart during a recording. Never reuse outside the spike.
+      OTP_PEPPER: ${OTP_PEPPER:-5f1d0c9ab0e14a6f8c1e2d3b4a5f60718293a4b5c6d7e8f90a1b2c3d4e5f6071}
+      CUSTOM_SCHEME_REDIRECT: ${CUSTOM_SCHEME_REDIRECT:-303}   # or: interstitial
+      REQUIRE_TXN_COOKIE: ${REQUIRE_TXN_COOKIE:-true}
+      RUST_LOG: info
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 2s
+      retries: 15
+
+  # Shares the idp's network namespace so 127.0.0.1:8080 IS the issuer, exactly as on a laptop,
+  # and the loopback callback really goes over 127.0.0.1.
+  e2e:
+    image: spike-p6/idp:dev
+    profiles: ["test"]
+    network_mode: "service:idp"
+    depends_on:
+      idp: { condition: service_healthy }
+    environment:
+      ISSUER: ${ISSUER:-http://127.0.0.1:8080}
+    command: ["another-login", "--headless", "--email", "e2e@example.cm", "--platform", "compose-e2e", "--mailpit", "http://mailpit:8025"]
