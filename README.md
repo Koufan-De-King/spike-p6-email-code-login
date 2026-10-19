@@ -4,6 +4,7 @@ Throwaway prototype for **P6** (pre-start spikes, Oct 16–23): can `authz-idp` 
 emailed one-time code, through the system browser, on iOS 15/16, Android 8/9, Windows 10 and
 macOS 12? Feeds ADR 15.
 
+- **New here? Start with [docs/context.md](docs/context.md).**
 - Design and hypotheses: [docs/architecture.md](docs/architecture.md)
 - What to film per OS: [docs/test-protocol.md](docs/test-protocol.md)
 
