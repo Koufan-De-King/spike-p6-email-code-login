@@ -206,10 +206,52 @@ H8 does not show up on Safari 17 or Chrome. It still has to be checked on Safari
   "already signed in" shortcut. For email-code login that costs nothing: there is no IdP session
   worth reusing.
 
+## Round 4 — iOS 18.3 simulator rehearsal (not iOS 15/16), 2026-10-20
+
+**Setup:**
+
+| Item | Value |
+|---|---|
+| Device | iPhone SE (3rd gen) simulator, **iOS 18.3.1**, on the Intel Mac from round 3. This was the only runtime installed; the 15.5 and 16.4 runtimes are still downloading |
+| Stack | Same as round 3. The simulator shares the Mac's network, so `http://127.0.0.1:8080` works unchanged |
+| Probe build | Flutter 3.44.1 debug, `flutter_web_auth_2` 5.1.0 |
+| Video | [`evidence/ios18-sim/p6-ios18-sim.mp4`](evidence/ios18-sim/p6-ios18-sim.mp4), all runs, 8 min |
+| Event log | [`evidence/ios18-sim/spike-events.json`](evidence/ios18-sim/spike-events.json) |
+
+### Results
+
+| Run | Result | Browser leg | Evidence |
+|---|---|---|---|
+| A, ephemeral on | ✅ | 34 s | video |
+| A, ephemeral on, **switch apps (H6)** | ✅ The user left the sheet twice: once to the Home screen, once to Safari to read the code in Mailpit. Each time, the sheet came back on the same page, and the login completed | 95 s | video, ~2:20–3:30 |
+| A, ephemeral off (H5) | ✅ after the "wants to use … to Sign In" alert | 50 s (incl. the alert) | [1](evidence/ios18-sim/1-A-ephemeral-off-alert.png), [2](evidence/ios18-sim/2-A-ephemeral-off-success.webp) |
+| B, "Return to Another" page | ✅ after one tap | 43 s | [3](evidence/ios18-sim/3-B-return-to-app-page.png), [4](evidence/ios18-sim/4-B-success.webp) |
+| C, claimed https | ❌ refused before loading (expected, see F10) | — | [5](evidence/ios18-sim/5-C-needs-associated-domains.png) |
+
+**H6 holds on iOS 18:** iOS doesn't cancel a pending ASWebAuthenticationSession while the user is
+in another app. On a real iPhone the switch would be to the Mail app. This must be re-run on 15
+and 16 before it counts.
+
+### F10 — Claimed-https callbacks need Associated Domains (`webcredentials`) · **cost for variant C**
+
+- **What iOS says (much clearer than macOS, see round 3):** *"Application with identifier
+  digital.camer.another.p6Probe is not associated with domain auth.another.camer.digital. Using
+  HTTPS callbacks requires Associated Domains using the `webcredentials` service type for
+  auth.another.camer.digital."*
+- **What variant C needs, on top of iOS ≥ 17.4 (H4):**
+  1. the app's entitlement `com.apple.developer.associated-domains` = `webcredentials:auth.another.camer.digital`;
+  2. that host serving `/.well-known/apple-app-site-association` over valid TLS. The stand-in
+     already serves one with a `webcredentials` entry (`config/well-known`), but the real host
+     fails TLS today (F4);
+  3. a **paid** Apple Developer team, because free personal teams can't add the Associated
+     Domains capability. The team ID also has to replace `TEAMID1234` in the AASA file.
+- **For ADR 15:** iOS 15/16 can't use C at all (H4), so the app needs the private-use scheme
+  anyway. C only adds value on 17.4+, and costs the three items above.
+
 ## Next
 
 - Real phones: Transsion with its stock browser (H2); low-RAM hardware for natural H1.
 - macOS 12: needs a macOS 12 VM or Mac (F8: macOS 14 is not a stand-in). Copy the built `.app` and the CLI over.
-- iOS 15/16 simulators: runtimes downloading on the Mac. Real iPhones still to find.
+- iOS 15/16 simulators: runtimes downloading on the Mac. Repeat round 4's table on each, H6 and C (H4) especially. Real iPhones still to find.
 - Windows 10 needs the CLI built for Windows. The probe app with button D also works there (same plugin code as Linux); check F7 on Windows.
 - Variant C waits on F4.
