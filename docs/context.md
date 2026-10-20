@@ -58,8 +58,10 @@ should get one confirmation run against the real pages.
 - If Redis restarts mid-session, the server answers 503 once and then recovers. It no longer
   crashes.
 
-Since then: Android 8 and 9 **emulators**. Results are in [findings.md](findings.md). Nothing has
-run on a real phone, on Windows or on a Mac yet.
+Since then: Android 8 and 9 **emulators**, Linux desktop, rehearsals on **macOS 14** and the
+**iOS 18.3 simulator**, and **Windows 11** (Ghislain's laptop, Edge and Chrome, native stack
+without Docker). Results are in [findings.md](findings.md). Nothing has run on a real phone, on
+Windows 10, on macOS 12 or on iOS 15/16 yet.
 
 ## How the testing will work (agreed in principle, not set up yet)
 

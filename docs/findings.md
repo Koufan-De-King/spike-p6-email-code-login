@@ -248,10 +248,87 @@ and 16 before it counts.
 - **For ADR 15:** iOS 15/16 can't use C at all (H4), so the app needs the private-use scheme
   anyway. C only adds value on 17.4+, and costs the three items above.
 
+## Round 5 — Windows desktop, 2026-10-20
+
+**Setup:**
+
+| Item | Value |
+|---|---|
+| Machine | Ghislain's laptop, **Windows 11 Pro 24H2** (build 26100). Stands in for Windows 10: no Windows 10 machine was available |
+| Stack | Native, no Docker (no admin rights, no WSL): Redis 8.10.2 and Mailpit 1.31.6 Windows builds, `idp` built with Rust 1.99.1 (MSVC). Started with [`scripts/windows-stack.ps1`](../scripts/windows-stack.ps1) |
+| Client | `another-login` (release build), launched with [`scripts/windows-login.ps1`](../scripts/windows-login.ps1) |
+| Security | Windows Firewall **on** for all profiles, with "notify when a new app is blocked"; Defender real-time protection on |
+| Event log | [`evidence/windows/spike-events.json`](evidence/windows/spike-events.json) (runs 1–2), [`run0-spike-events.json`](evidence/windows/run0-spike-events.json) |
+
+A person typed the email and the code. Screen recordings are kept by Ghislain (not in the repo).
+
+| Run | Default browser | Result | Browser leg | Code sent → typed |
+|---|---|---|---|---|
+| Automatic (`--headless`) | — | ✅ | 0.1 s | — |
+| `scripts/negative.sh` | — | ✅ 14/14 PASS | — | — |
+| 0 · unobserved trial | Chrome 155 | ✅ ([log](evidence/windows/run0-cli.log)) | 306 s | 18 s |
+| 1 · Edge | **Edge 155** (`Edg/155` in the User-Agent) | ✅ ([log](evidence/windows/run1-cli-edge.log)) | 121 s | 34 s (4 codes sent, see F13) |
+| 2 · Chrome | **Chrome 155** | ✅ ([log](evidence/windows/run2-cli-chrome.log)) | 38 s | 25 s |
+
+The loopback flow works on Windows with both browsers, unchanged from Linux. In each run the CLI
+opened the console, then the browser came up on top of it at our email page.
+
+### F11 — No firewall prompt on Windows · **H7 (firewall) killed**
+
+- Listening on `127.0.0.1:<ephemeral>` didn't trigger Windows Firewall, with the firewall on and
+  its notifications enabled.
+- **Evidence:** no prompt seen in runs 1–2, and Windows holds no firewall rule for
+  `another-login.exe`. Answering a prompt, either way, would have left one.
+- **Keep it that way:** the core must bind `127.0.0.1` only. Binding `0.0.0.0` (or `[::]`) is what
+  triggers the prompt.
+
+### F12 — The app doesn't come back to the front on Windows · **UX, same as F7**
+
+- After the code, the browser stays in front showing "You're signed in" and the CLI's console stays
+  behind it. Seen with Edge and Chrome.
+- Windows' foreground lock stops a background process from raising itself, as on GNOME/Wayland.
+- **Fix (as F7):** for the Flutter app, try `window_manager.focus()` / `SetForegroundWindow`
+  (Windows usually turns it into a taskbar flash), plus a toast notification ("Signed in — return
+  to Another"). Make the tab's text say "return to Another" rather than suggesting it closes itself.
+
+### F13 — Users resend the code · **UX, for the login pages**
+
+- In run 1 four codes were sent within 50 s (12:25:48, 12:26:29, 12:26:33, 12:26:38). The one that
+  worked was the last. The tester confirmed pressing "Send a new code" several times; Mailpit
+  delivers instantly, so it wasn't a slow email. Nothing stops a user from doing the same.
+- Each send replaces the previous code, so a user who types the code from an earlier email gets
+  "That code isn't right". Four sends also use 4 of the 5-per-15-min allowance.
+- **Consider for `authz-ui`:** keep the last few codes valid until expiry, or disable "Send a new
+  code" for ~30 s with a countdown.
+
+### F14 — 5 minutes in the browser is real · **supports F6**
+
+- Run 0 spent 306 s in the browser, run 1 121 s. The CLI waits as long as needed, but
+  `flutter_web_auth_2`'s default timeout is 5 minutes. Run 0 would have been reported as
+  "canceled" by the plugin.
+- **Why it matters:** if the app stops waiting before the server does, the user can still finish
+  in the browser, but the redirect hits a closed port. The login is lost silently, like F1.
+- **Fix:** the app should wait as long as the server keeps the login open: 15 min (the
+  authorization request's lifetime). Show a "Cancel" button in the app so a user who gave up
+  isn't stuck waiting. Or let the core own the loopback listener (no plugin on desktop).
+
+### Windows notes (not findings about the flow)
+
+- **Default browser lives in a new place on Windows 11 24H2.** `UrlAssociations\https\UserChoice`
+  kept saying Edge while `UserChoiceLatest\ProgId` said Chrome, and Chrome was what opened. Anything
+  that reports "which browser" must read `UserChoiceLatest` first. The User-Agent on `/spike` is the
+  reliable record.
+- **Windows PowerShell 5.1 garbles the CLI's `→` and `✓`** unless the console is switched to UTF-8,
+  and wraps stderr lines in `NativeCommandError`. Cosmetic; the launcher handles both.
+- **Edge runs in the background even with no window open** (Startup boost). With Edge as the default,
+  the browser opened fast because it was already running.
+
 ## Next
 
 - Real phones: Transsion with its stock browser (H2); low-RAM hardware for natural H1.
 - macOS 12: needs a macOS 12 VM or Mac (F8: macOS 14 is not a stand-in). Copy the built `.app` and the CLI over.
 - iOS 15/16 simulators: runtimes downloading on the Mac. Repeat round 4's table on each, H6 and C (H4) especially. Real iPhones still to find.
-- Windows 10 needs the CLI built for Windows. The probe app with button D also works there (same plugin code as Linux); check F7 on Windows.
+- Windows: one run on a real Windows 10 22H2 machine or VM to confirm round 5 (Windows 11 was the
+  stand-in). The probe app with button D (`useWebview: false`) on Windows needs Flutter installed;
+  the C++ Build Tools are already on Ghislain's laptop.
 - Variant C waits on F4.

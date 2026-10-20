@@ -1,0 +1,5 @@
+→ listening on http://127.0.0.1:60251/callback
+→ opening the system browser at
+  http://127.0.0.1:8080/authorize?response_type=code&client_id=another-app&redirect_uri=http%3A%2F%2F127.0.0.1%3A60251%2Fcallback&scope=openid+email+offline_access&state=ZQ2O-8R9K4Sgh0fULsyx4Q&nonce=GDh7JH_2ioRbcy0KdGPchw&code_challenge=6LhesYajBhCJCeEZKZoaVrgAITSUa_VYTgZQgvAuexs&code_challenge_method=S256&prompt=login&spike_platform=win11-chrome
+✓ signed in as win11-chrome@example.cm (sub pcw1u4lQtOIzVhzll9WO)
+  browser leg 37.6s, total 37.6s, refresh token: true

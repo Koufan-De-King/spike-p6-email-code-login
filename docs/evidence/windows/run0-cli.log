@@ -1,0 +1,13 @@
+.\target\release\another-login.exe : ΓåÆ listening on http://127.0.0.1:53912/callback
+At line:1 char:75
++ ... ode-login'; .\target\release\another-login.exe --platform win11-edge  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ΓåÆ listening o...:53912/callback:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ΓåÆ opening the system browser at
+  http://127.0.0.1:8080/authorize?response_type=code&client_id=another-app&redirect_uri=http%3A%2F%2F127.0.0.1%3A53912%
+2Fcallback&scope=openid+email+offline_access&state=27H2-RY0z3sMLZw4xhTDHg&nonce=fJ4izUgdFOQK91ErF2A5gw&code_challenge=A
+pNN1rR-xrw9IxEJlYkeZzgxPLmG_sDRZdeXiNUO0Ag&code_challenge_method=S256&prompt=login&spike_platform=win11-edge
+Γ£ô signed in as ghislain@example.com (sub 1aTrGhHD84kSTMRQUK26)
+  browser leg 305.8s, total 305.9s, refresh token: true
