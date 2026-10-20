@@ -146,9 +146,70 @@ The loopback flow works on Linux exactly as designed. That's the same mechanism 
   - Serve our own wording in the tab ("You're signed in — return to Another"), as the CLI does.
 - **Check on Windows:** its foreground lock has a similar rule.
 
+## Round 3 — macOS 14 rehearsal (not macOS 12), 2026-10-20
+
+**Setup:**
+
+| Item | Value |
+|---|---|
+| Mac | Intel, **macOS 14.7.1** (23H222). Not the macOS 12 target: that run still needs a macOS 12 VM or Mac |
+| Browsers | Chrome (the default), Safari 17.6 |
+| Stack | Redis and Mailpit in Docker (colima). The IdP ran **natively** (`cargo run -p idp`), because pulling the Rust build image was too slow on this connection. Same code, same config |
+| Probe build | Flutter **3.44.1** debug build (Linux used 3.47.7), `flutter_web_auth_2` 5.1.0 |
+| Event log | [`evidence/macos14/spike-events.json`](evidence/macos14/spike-events.json) |
+
+The automatic login and `negative.sh` both pass on the Mac.
+
+### Results
+
+| Run | Result | Browser leg | Evidence |
+|---|---|---|---|
+| CLI, loopback, Chrome (default) | ✅ | 39 s | [1](evidence/macos14/1-cli-chrome-success.webp) |
+| CLI, loopback, Safari 17.6 (`--no-open` + `open -a Safari`) | ✅ no warning on the `http://127.0.0.1` redirect | 44 s | [2](evidence/macos14/2-cli-safari17-success.webp) |
+| Probe A, ephemeral on, Chrome default | ✅ ×2, ran **in Chrome** | 36 s | — |
+| Probe A, ephemeral off, Chrome default | ❌ ×3 "Couldn't communicate with a helper application", then ✅ on a later retry | 29 s | [3](evidence/macos14/3-probe-A-ephemeral-off-helper-error.webp), [8](evidence/macos14/8-probe-A-ephemeral-off-chrome-retry-success.png) |
+| Probe B, ephemeral off, Chrome default | ✅ after the H5 alert and one tap | 124 s (incl. the alert) | [4](evidence/macos14/4-probe-B-wants-to-use-alert-chrome.webp), [5](evidence/macos14/5-probe-B-chrome-auth-window.webp), [6](evidence/macos14/6-probe-B-success.webp) |
+| Probe A, ephemeral on, **Safari default** | ✅ Safari "Private Browsing" window | 34 s | [9](evidence/macos14/9-probe-A-ephemeral-on-safari-private-window.webp), [11](evidence/macos14/11-probe-A-safari-success-both.png) |
+| Probe A, ephemeral off, **Safari default** | ✅ after the H5 alert (Safari icon) | 55 s (incl. the alert) | [10](evidence/macos14/10-probe-A-ephemeral-off-safari-alert.webp), [11](evidence/macos14/11-probe-A-safari-success-both.png) |
+| Probe C, claimed https | ⏸ "User canceled" within 1 s; nothing reached the server | — | [7](evidence/macos14/7-probe-C-canceled.webp) |
+
+H8 does not show up on Safari 17 or Chrome. It still has to be checked on Safari 15 (macOS 12).
+
+### F8 — On macOS 14, ASWebAuthenticationSession runs in the *default* browser · **test-coverage note**
+
+- **What happens:** with Chrome as the default, the sign-in sheet was a Chrome window (Chrome's
+  user agent in the event log, Chrome's icon on the H5 alert). With Safari as the default, it was
+  a Safari window ("Private Browsing" when ephemeral).
+- **Why it matters:** macOS 14 lets the default browser serve ASWebAuthenticationSession. macOS 12
+  can't, so there it is always Safari 15. **This Mac can't stand in for macOS 12**, even for the
+  probe app's browser engine.
+- **For the product:** on macOS 14+, users with Chrome or another default browser get that
+  browser's login window, with that browser's cookies, autofill and extensions. Any ADR 15
+  wording about "Safari" on macOS should say "the system's web authentication session".
+
+### F9 — First non-ephemeral session via Chrome can fail at launch · **friction, flaky**
+
+- **What happens:** the first three ephemeral-off attempts failed instantly with
+  `EUNKNOWN, Couldn't communicate with a helper application.` Nothing reached the server. Minutes
+  later, the same button with the same setting worked (after the H5 alert).
+- **Not reproduced** with Safari as the default. The system log kept nothing from those seconds.
+- **Likely cause:** the hand-off from AuthenticationServices to Chrome's provider failed on the
+  first try. This is an unconfirmed guess.
+- **Mitigation:** treat this error like "canceled": offer a retry, don't show it as a hard error.
+  Prefer `prefersEphemeralWebBrowserSession = true`, which worked every time and has no H5 alert.
+
+### H5 confirmed on macOS 14
+
+- With ephemeral off, macOS shows *"p6_probe" Wants to Use "127.0.0.1" to Sign In* before the
+  page loads, with the default browser's icon on it.
+- With ephemeral on, there is no alert, but also no shared browser cookies, so there's no
+  "already signed in" shortcut. For email-code login that costs nothing: there is no IdP session
+  worth reusing.
+
 ## Next
 
 - Real phones: Transsion with its stock browser (H2); low-RAM hardware for natural H1.
-- iOS 15/16 and macOS 12 need a Mac.
+- macOS 12: needs a macOS 12 VM or Mac (F8: macOS 14 is not a stand-in). Copy the built `.app` and the CLI over.
+- iOS 15/16 simulators: runtimes downloading on the Mac. Real iPhones still to find.
 - Windows 10 needs the CLI built for Windows. The probe app with button D also works there (same plugin code as Linux); check F7 on Windows.
 - Variant C waits on F4.
