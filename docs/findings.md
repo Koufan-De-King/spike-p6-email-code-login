@@ -326,8 +326,9 @@ opened the console, then the browser came up on top of it at our email page.
 ## Next
 
 - Real phones: Transsion with its stock browser (H2); low-RAM hardware for natural H1.
-- macOS 12: needs a macOS 12 VM or Mac (F8: macOS 14 is not a stand-in). Copy the built `.app` and the CLI over.
-- iOS 15/16 simulators: runtimes downloading on the Mac. Repeat round 4's table on each, H6 and C (H4) especially. Real iPhones still to find.
+- **Parked (2026-10-20):** macOS 12 and iOS 15/16.
+  - macOS 12: no machine available (F8: macOS 14 is not a stand-in). When one turns up, copy the built `.app` and the CLI over.
+  - iOS 15/16 simulators: the runtimes (~7 GB each) were too slow to download on the office connection. Get them over a faster network (Xcode → Settings → Components), then repeat round 4's table on each, H6 and C (H4) especially. Real iPhones still to find.
 - Windows: one run on a real Windows 10 22H2 machine or VM to confirm round 5 (Windows 11 was the
   stand-in). The probe app with button D (`useWebview: false`) on Windows needs Flutter installed;
   the C++ Build Tools are already on Ghislain's laptop.
