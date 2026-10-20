@@ -1,11 +1,9 @@
 // P6 probe: one screen, one button per redirect variant, timings on screen for the recording.
 //
-// UNVERIFIED: written without a Flutter SDK on the authoring machine. First run:
-//   flutter create --platforms=ios,android,macos --org digital.camer.another --project-name p6_probe .
-//   then apply the platform snippets in README.md.
+// Analyzes clean on Flutter 3.47.7 with flutter_web_auth_2 5.1.0; see README.md for device setup.
 
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'dart:io' show InternetAddress, Platform, ServerSocket;
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
@@ -88,9 +86,11 @@ class _ProbeState extends State<Probe> {
       _say('→ ${Uri.parse(redirectUri).scheme} ${mode ?? ''} ephemeral=$ephemeral');
 
       final isHttps = redirectUri.startsWith('https://');
+      final isLoopback = redirectUri.startsWith('http://127.0.0.1');
       final result = await FlutterWebAuth2.authenticate(
         url: url.toString(),
-        callbackUrlScheme: isHttps ? 'https' : scheme,
+        // Desktop (Linux/Windows): the plugin listens on 127.0.0.1 at the port in this URL.
+        callbackUrlScheme: isLoopback ? redirectUri : (isHttps ? 'https' : scheme),
         options: FlutterWebAuth2Options(
           preferEphemeral: ephemeral,
           // iOS 17.4+ only; on iOS 15/16 an https callback cannot complete the session.
@@ -126,9 +126,21 @@ class _ProbeState extends State<Probe> {
     }
   }
 
+  /// Desktop: ask the OS for a free port, release it, and hand it to the plugin, which re-binds it.
+  /// There is a small window where another local process could take the port; PKCE makes a stolen
+  /// code useless, so the cost is a failed login, not a compromised one.
+  Future<void> _runLoopback() async {
+    final probe = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final port = probe.port;
+    await probe.close();
+    await _run(redirectUri: 'http://127.0.0.1:$port/callback');
+  }
+
   @override
   Widget build(BuildContext context) {
     final mobile = Platform.isIOS || Platform.isAndroid || Platform.isMacOS;
+    // macOS uses ASWebAuthenticationSession (buttons A–C); the loopback listener is Linux/Windows only.
+    final desktop = Platform.isLinux || Platform.isWindows;
     return Scaffold(
       appBar: AppBar(title: const Text('P6 probe')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
@@ -140,11 +152,10 @@ class _ProbeState extends State<Probe> {
           value: ephemeral,
           onChanged: (v) => setState(() => ephemeral = v),
         ),
-        if (!mobile)
-          const Padding(
-            padding: EdgeInsets.all(8),
-            child: Text('Windows/Linux: use the Rust client (cargo run -p another-login). '
-                'flutter_web_auth_2 listens on localhost, which authz-idp refuses (RFC 8252 §8.3).'),
+        if (desktop)
+          FilledButton(
+            onPressed: busy ? null : _runLoopback,
+            child: const Text('D · loopback 127.0.0.1 (desktop)'),
           ),
         FilledButton(
           onPressed: busy || !mobile ? null : () => _run(redirectUri: schemeRedirect),
