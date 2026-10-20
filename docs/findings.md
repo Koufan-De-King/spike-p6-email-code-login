@@ -105,9 +105,50 @@ Time in the browser for a successful run was 10–16 s on the emulator. Most of 
 - The `iss` and `state` checks, PKCE, the token exchange and ID-token decoding in the probe app
   all work against the stand-in.
 
+## Round 2 — Linux desktop, 2026-10-20
+
+**Setup:** Ubuntu 24.04, **GNOME on Wayland**, Chrome 155 as the default browser. The stack runs
+on the same laptop, and the person at the keyboard typed the email and the code.
+
+| Run | Result | Browser leg |
+|---|---|---|
+| Rust CLI (`another-login`), the core's desktop flow | ✅ ([1](evidence/linux/1-cli-chrome-success.png)) | 37 s |
+| Probe app, plugin defaults | ❌ the plugin opened its own embedded web view, not Chrome ([2](evidence/linux/2-flutter-embedded-webview-default.png)) | — |
+| Probe app, button D, `useWebview: false` | ✅ ✓ with the email ([3](evidence/linux/3-flutter-system-browser-success.png)), but the window **did not come to the front** | 23 s |
+
+The loopback flow works on Linux exactly as designed. That's the same mechanism Windows and macOS
+(if loopback) will use.
+
+### F6 — `flutter_web_auth_2` defaults to an embedded web view on Linux/Windows · **must override**
+
+- **What happens:** with default options, the plugin uses `desktop_webview_window` (WebKitGTK)
+  instead of the system browser. RFC 8252 forbids that.
+- **Why it failed:** in that mode no loopback listener is started. The web view followed our
+  redirect to `127.0.0.1:<port>` and got "Connection refused".
+- **Fix:** always pass `useWebview: false` on desktop.
+- **Also raise the timeout.** The plugin's default is 5 minutes, after which it reports
+  "canceled". That's short for an email code.
+- **Packaging cost:** even with the web view off, the Linux build links `libwebkit2gtk-4.1`.
+  Every Linux user needs that library installed. Building needs `libwebkit2gtk-4.1-dev`.
+- **Alternative:** the Rust core owns the loopback listener, as the CLI does, and the plugin isn't
+  used on desktop at all. That drops the WebKitGTK dependency.
+
+### F7 — The app can't bring itself back to the front on Wayland · **UX**
+
+- **What happens:** the login completes, but the browser keeps focus. The plugin's
+  `WindowToFront` is an X11-era trick, and GNOME on Wayland ignores self-raising without an
+  `xdg-activation` token.
+- **The tab's text is misleading:** the plugin's page says "This page should automatically close".
+  Browsers don't let a page close a tab it didn't open, so it stays.
+- **Fix:**
+  - Request activation properly (xdg-activation), or show a desktop notification ("Signed in —
+    open Another").
+  - Serve our own wording in the tab ("You're signed in — return to Another"), as the CLI does.
+- **Check on Windows:** its foreground lock has a similar rule.
+
 ## Next
 
 - Real phones: Transsion with its stock browser (H2); low-RAM hardware for natural H1.
 - iOS 15/16 and macOS 12 need a Mac.
-- Windows 10 needs the CLI built for Windows.
+- Windows 10 needs the CLI built for Windows. The probe app with button D also works there (same plugin code as Linux); check F7 on Windows.
 - Variant C waits on F4.

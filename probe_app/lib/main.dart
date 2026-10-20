@@ -27,7 +27,9 @@ class Probe extends StatefulWidget {
 }
 
 class _ProbeState extends State<Probe> {
-  final issuer = TextEditingController(text: 'https://auth.another.camer.digital');
+  // Build with --dart-define=P6_ISSUER=http://127.0.0.1:8080 to point at a local stack.
+  final issuer = TextEditingController(
+      text: const String.fromEnvironment('P6_ISSUER', defaultValue: 'https://auth.another.camer.digital'));
   final label = TextEditingController(text: '${Platform.operatingSystem}-${Platform.operatingSystemVersion}');
   bool ephemeral = true;
   bool busy = false;
@@ -93,6 +95,11 @@ class _ProbeState extends State<Probe> {
         callbackUrlScheme: isLoopback ? redirectUri : (isHttps ? 'https' : scheme),
         options: FlutterWebAuth2Options(
           preferEphemeral: ephemeral,
+          // Linux/Windows default to an embedded webview (forbidden by RFC 8252); force the system
+          // browser + loopback listener. Ignored on mobile and macOS.
+          useWebview: false,
+          // Default is 5 min; an email code can take longer to arrive and be typed.
+          timeout: 15 * 60,
           // iOS 17.4+ only; on iOS 15/16 an https callback cannot complete the session.
           httpsHost: isHttps ? httpsHost : null,
           httpsPath: isHttps ? '/app/callback' : null,
