@@ -20,7 +20,7 @@ Everything here is **disposable test equipment**, written from scratch for the s
 |---|---|---|
 | `idp/` | A **stand-in** login server. Outwardly it behaves like `authz-idp`: same URLs, same rules for which redirect addresses it accepts, PKCE required. It does send the email (into Mailpit, a fake inbox) and does check the code: expiry, 5 tries, rate limits, single use | Not a copy of `authz-idp`. No code is shared with `lightbridge-authz`, which was not touched. No Postgres, no Keycloak, no React login pages; users live in Redis |
 | `another-login/` | A small command-line program that logs in the way the **desktop** app will: opens the browser, waits on `127.0.0.1` for the redirect, swaps the code for tokens, checks the ID token. `--headless` runs the whole thing automatically | Not the app's Rust core. One file, no Flutter bridge, no token storage. Use it as a reference for the core |
-| `probe_app/` | A throwaway Flutter app with three buttons, for **phones** (and macOS). It opens the system browser to log in and shows whether the phone hands control back to the app | Not the Flutter–Rust interface. It does its own login maths in Dart. **Never compiled**: there was no Flutter SDK on the machine it was written on |
+| `probe_app/` | A throwaway Flutter app with three buttons, for **phones** (and macOS). It opens the system browser to log in and shows whether the phone hands control back to the app. Runs on Android 8/9 emulators | Not the Flutter–Rust interface. It does its own login maths in Dart |
 | `docs/architecture.md` | The design, plus **H1–H11**, the list of things we suspect might break, each with a test | — |
 | `docs/test-protocol.md` | What to film on each OS | Written before the logistics below were worked out. Still to be updated |
 
@@ -58,7 +58,8 @@ should get one confirmation run against the real pages.
 - If Redis restarts mid-session, the server answers 503 once and then recovers. It no longer
   crashes.
 
-Nothing has been run on a phone, on Windows or on a Mac yet.
+Since then: Android 8 and 9 **emulators**. Results are in [findings.md](findings.md). Nothing has
+run on a real phone, on Windows or on a Mac yet.
 
 ## How the testing will work (agreed in principle, not set up yet)
 
@@ -88,7 +89,8 @@ Nothing has been run on a phone, on Windows or on a Mac yet.
 
 ## Not done yet / open
 
-- [ ] Get `probe_app` to compile (Android first; needs no Apple account).
+- [x] Get `probe_app` to compile and run: done on Android 8/9 emulators. See
+      [findings.md](findings.md): H1 is confirmed as a blocker, and a manifest fix is applied.
 - [ ] Add the tunnel to `compose.yaml`.
 - [ ] CI workflow that builds the CLI (Windows/macOS/Linux) and the Android `.apk`.
 - [ ] Rewrite `docs/test-protocol.md` with the logistics above.

@@ -1,22 +1,24 @@
 # P6 probe app (iOS, Android, macOS)
 
-> **Unverified:** written without a Flutter SDK on the authoring machine. Expect a first-run fix or
-> two (the `flutter_web_auth_2` option names in particular). Windows evidence comes from the Rust
+> **Status:** runs on Android 8 and 9 emulators (Flutter 3.47.7, `flutter_web_auth_2` 5.1.0);
+> results in `docs/findings.md`. Not yet run on a phone, iOS or macOS. Drive it on an
+> emulator with `scripts/android-run.sh`. Windows evidence comes from the Rust
 > client instead (`cargo run -p another-login`); see the root README.
 
-## First run
+## Run
+
+The platform folders (`android/`, `ios/`, `macos/`) are committed and the Android snippets below are
+already applied.
 
 ```bash
 cd probe_app
-flutter create --platforms=ios,android,macos --org digital.camer.another --project-name p6_probe .
 flutter pub get
+flutter run -d <device>
 ```
-
-Then apply the snippets below and run with `flutter run -d <device>`.
 
 ## Android (8 / 9)
 
-`android/app/src/main/AndroidManifest.xml`, inside `<application>`:
+Already in `android/app/src/main/AndroidManifest.xml`, for reference:
 
 ```xml
 <activity
@@ -38,9 +40,13 @@ Then apply the snippets below and run with `flutter run -d <device>`.
 </activity>
 ```
 
-Also set `applicationId "digital.camer.another.p6probe"` and keep `minSdk` ≤ 26.
+**Do not add `android:taskAffinity=""`** to this activity or to `MainActivity`, despite the
+plugin's README and Flutter's template. With it, a successful login stays hidden behind Chrome's
+Custom Tab (finding F2 in `docs/findings.md`).
 
-`<queries>` (Android 11+ package visibility; harmless on 8/9, needed when the same build runs on newer phones):
+`flutter create` sets `applicationId` to `digital.camer.another.p6_probe`; Flutter 3.47 defaults `minSdk` to 24, below Android 8 (26).
+
+Also already there: `<queries>` (Android 11+ package visibility; harmless on 8/9, needed when the same build runs on newer phones):
 
 ```xml
 <queries>
