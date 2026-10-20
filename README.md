@@ -28,6 +28,15 @@ cargo run -p another-login          # same flow in your real browser; the code i
 
 Then open http://127.0.0.1:8080/spike for the timeline and http://127.0.0.1:8025 for the mail.
 
+**Windows without Docker:** unzip the Windows builds of Redis and Mailpit under
+`%LOCALAPPDATA%\p6-tools\redis\` and `%LOCALAPPDATA%\p6-tools\mailpit\`, install Rust and the
+Visual Studio C++ Build Tools, then:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\windows-stack.ps1                         # build + start (-Stop to stop)
+powershell -ExecutionPolicy Bypass -File scripts\windows-login.ps1 -Platform win11-edge   # one recorded login
+```
+
 Knobs (env on `docker compose up`): `ISSUER`, `CUSTOM_SCHEME_REDIRECT=303|interstitial`,
 `REQUIRE_TXN_COOKIE=true|false`. Apps can also pick the redirect style per run with
 `spike_redirect_mode=interstitial` on `/authorize`; any `spike_*` parameter is logged on `/spike`.
