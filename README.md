@@ -7,6 +7,7 @@ macOS 12? Feeds ADR 15.
 - **New here? Start with [docs/context.md](docs/context.md).**
 - Design and hypotheses: [docs/architecture.md](docs/architecture.md)
 - What to film per OS: [docs/test-protocol.md](docs/test-protocol.md)
+- Run the tests yourself, by hand: [docs/manual-testing.md](docs/manual-testing.md) (Linux, Android emulators); Mac: [docs/mac-setup.md](docs/mac-setup.md)
 
 ## What's here
 
